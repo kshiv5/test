@@ -1,0 +1,73 @@
+name: Check Folder Changes
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  check_folder_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      solution_file: ${{ steps.check_changes.outputs.solution_file }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: check_changes
+        shell: bash
+        run: |
+          # Get changed files based on event type
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA=$(git merge-base ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+            CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }})
+          else
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          fi
+          
+          # Initialize solution file variable
+          SOLUTION_FILE=""
+          
+          # Check for changes in specific directories and set solution file
+          if echo "$CHANGED_FILES" | grep -q "^project1/"; then
+            SOLUTION_FILE="solution1.sln"
+          elif echo "$CHANGED_FILES" | grep -q "^project2/"; then
+            SOLUTION_FILE="solution2.sln"
+          elif echo "$CHANGED_FILES" | grep -q "^project3/"; then
+            SOLUTION_FILE="solution3.sln"
+          elif echo "$CHANGED_FILES" | grep -q "^project4/"; then
+            SOLUTION_FILE="solution4.sln"
+          fi
+          
+          # Set the output
+          if [ -n "$SOLUTION_FILE" ]; then
+            echo "solution_file=${SOLUTION_FILE}" >> $GITHUB_OUTPUT
+            echo "Selected solution file: ${SOLUTION_FILE}"
+          else
+            echo "No matching directory changes found"
+            echo "solution_file=" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check_folder_changes
+    if: needs.check_folder_changes.outputs.solution_file != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build Solution
+        run: |
+          SOLUTION_FILE="${{ needs.check_folder_changes.outputs.solution_file }}"
+          echo "Building solution: $SOLUTION_FILE"
+          #dotnet build $SOLUTION_FILE
