@@ -40,7 +40,7 @@ jobs:
             SOLUTION_FILE="solution2.sln"
           elif echo "$CHANGED_FILES" | grep -q "^project3/"; then
             SOLUTION_FILE="solution3.sln"
-          elif echo "$CHANGED_FILES" | grep -q "^project4/"; then
+          else
             SOLUTION_FILE="solution4.sln"
           fi
           
